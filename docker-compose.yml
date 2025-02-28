@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # 1. MySQL Target
+  mysql_target:
+    build:
+      context: ./mysql_target
+      dockerfile: Dockerfile
+    container_name: mysql_target
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: testdb
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: testpass
+    ports:
+      - "3306:3306"     # Allows external access on localhost:3306 (optional)
+    networks:
+      - my_network
+
+  # 2. Vulnerable Web App (PHP + Apache)
+  web_target:
+    build:
+      context: ./web_target
+      dockerfile: Dockerfile
+    container_name: web_target
+    depends_on:
+      - mysql_target     # Ensure mysql is up before web_target starts
+    ports:
+      - "8080:80"        # Access the web app at http://localhost:8080
+    networks:
+      - my_network
+
+  # 3. Attack Agent (Python + sqlmap, nmap, etc.)
+  attack_agent:
+    build:
+      context: ./attack_agent
+      dockerfile: Dockerfile
+    container_name: attack_agent
+    depends_on:
+      - mysql_target
+      - web_target
+    networks:
+      - my_network
+    # If your Dockerfile or main.py is set to run automatically (CMD),
+    # this container will execute the attack script on startup.
+
+networks:
+  my_network:
+    driver: bridge
+
